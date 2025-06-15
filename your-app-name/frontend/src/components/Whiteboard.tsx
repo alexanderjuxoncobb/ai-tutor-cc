@@ -12,7 +12,7 @@ export default function Whiteboard({ onElementsChange, onStrokeCompleted }: Whit
   const isDrawingRef = useRef(false);
 
   const handleChange = useCallback(
-    (elements: readonly any[], appState: any, _files: any) => {
+    (elements: readonly any[], _appState: any, _files: any) => {
       // Notify parent component of changes for AI analysis
       if (onElementsChange) {
         onElementsChange([...elements]); // Convert readonly to mutable array

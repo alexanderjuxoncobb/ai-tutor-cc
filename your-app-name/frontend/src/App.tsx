@@ -7,10 +7,13 @@ function App() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [apiKey, setApiKey] = useState<string>("");
-  const [selectedVoice, setSelectedVoice] = useState<'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer'>('alloy');
-  const [microphonePermission, setMicrophonePermission] = useState<'unknown' | 'granted' | 'denied'>('unknown');
+  const [selectedVoice, setSelectedVoice] = useState<
+    "alloy" | "ash" | "ballad" | "coral" | "echo" | "sage" | "shimmer" | "verse"
+  >("alloy");
   const [debugImage, setDebugImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isAnalyzingRef = useRef(false);
+  const pendingAnalysisRef = useRef(false);
 
   // Initialize OpenAI Realtime API hook
   const {
@@ -22,7 +25,6 @@ function App() {
     analyzeMathProblem,
     connect,
     disconnect,
-    startVoiceRecording,
     stopVoiceRecording,
     analyzeWhiteboard,
   } = useOpenAIRealtime({ 
@@ -66,7 +68,6 @@ function App() {
     } catch (err) {
       console.error("❌ Failed to start tutor session:", err);
       setIsSessionActive(false);
-      setError(err instanceof Error ? err.message : 'Failed to start session');
     }
   };
 
@@ -123,26 +124,13 @@ function App() {
         console.log("✅ Manual whiteboard image sent successfully");
       } catch (err) {
         console.error("❌ Failed to send manual whiteboard capture:", err);
-        setError(err instanceof Error ? err.message : 'Failed to capture whiteboard');
       }
     } else {
       console.warn("⚠️ Could not find whiteboard canvas for manual capture");
       console.log("🔍 Available canvas elements:", document.querySelectorAll('canvas'));
-      setError("Could not find whiteboard canvas");
     }
   };
 
-  const requestMicrophonePermission = async () => {
-    try {
-      console.log("🎤 Requesting microphone permission...");
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-      setMicrophonePermission('granted');
-      console.log("✅ Microphone permission granted!");
-    } catch (error) {
-      console.error("❌ Microphone permission denied:", error);
-      setMicrophonePermission('denied');
-    }
-  };
 
   const handleWhiteboardChange = async (elements: any[]) => {
     console.log("📝 Whiteboard updated with", elements.length, "elements");
@@ -152,15 +140,24 @@ function App() {
   const handleStrokeCompleted = async () => {
     console.log("🖊️ Stroke completed - checking if we should analyze whiteboard");
     
+    // Prevent race conditions - only allow one analysis at a time
+    if (isAnalyzingRef.current) {
+      console.log("⚠️ Analysis already in progress, marking for pending analysis");
+      pendingAnalysisRef.current = true;
+      return;
+    }
+    
     // Only auto-analyze if session is active and connected
     if (isSessionActive && isConnected) {
+      isAnalyzingRef.current = true;
       try {
-        // Additional check for data channel state
+        // Additional check for data channel state (but don't block if service exists)
         if ((window as any).realtimeService) {
           const status = (window as any).realtimeService.getConnectionStatus();
-          if (!status.dataChannelExists || status.dataChannelState !== 'open') {
-            console.log("⚠️ Skipping auto-analysis - data channel not ready:", status);
-            return;
+          console.log("📊 Data channel status:", status);
+          if (!status.dataChannelExists || status.dataChannelState !== "open") {
+            console.log("⚠️ Data channel not ready but proceeding with analysis:", status);
+            // Don't return - still try to analyze
           }
         }
         
@@ -196,6 +193,18 @@ function App() {
         }
       } catch (err) {
         console.error("❌ Failed to auto-analyze whiteboard after stroke completion:", err);
+      } finally {
+        isAnalyzingRef.current = false;
+        
+        // Check if another analysis was requested while we were processing
+        if (pendingAnalysisRef.current) {
+          pendingAnalysisRef.current = false;
+          console.log("🔄 Running pending analysis after completion");
+          // Small delay to ensure the whiteboard has updated
+          setTimeout(() => {
+            handleStrokeCompleted();
+          }, 50);
+        }
       }
     } else {
       console.log("📝 Stroke completion ignored - session not active or not connected");
@@ -239,12 +248,14 @@ function App() {
                 fontSize: "14px"
               }}
             >
-              <option value="alloy">Alloy (Neutral)</option>
-              <option value="echo">Echo (Male)</option>
-              <option value="fable">Fable (British Male)</option>
-              <option value="onyx">Onyx (Deep Male)</option>
-              <option value="nova">Nova (Young Female)</option>
-              <option value="shimmer">Shimmer (Soft Female)</option>
+              <option value="alloy">Alloy (balanced & clear)</option>
+              <option value="ash">Ash (neutral & steady)</option>
+              <option value="ballad">Ballad (soft & emotional)</option>
+              <option value="coral">Coral (warm & friendly)</option>
+              <option value="echo">Echo (deep & calm)</option>
+              <option value="sage">Sage (calm & thoughtful)</option>
+              <option value="shimmer">Shimmer (crisp & pleasant)</option>
+              <option value="verse">Verse (expressive)</option>
             </select>
           </div>
           

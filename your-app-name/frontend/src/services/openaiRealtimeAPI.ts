@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 export interface OpenAIRealtimeConfig {
   apiKey: string;
   model?: string;
-  voice?: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
+  voice?: 'alloy' | 'ash' | 'ballad' | 'coral' | 'echo' | 'sage' | 'shimmer' | 'verse';
 }
 
 export interface WhiteboardImageData {
@@ -31,6 +31,7 @@ export class OpenAIRealtimeService {
   private isRecording = false;
   private currentSession: EphemeralSession | null = null;
   private audioElement: HTMLAudioElement | null = null;
+  private mathProblemAnalysis: string | null = null;
 
   constructor(config: OpenAIRealtimeConfig) {
     this.config = {
@@ -82,7 +83,9 @@ export class OpenAIRealtimeService {
       });
 
       const analysis = response.choices[0].message.content || '';
+      this.mathProblemAnalysis = analysis; // Store for voice conversation
       console.log('✅ Math problem analyzed successfully');
+      console.log('📊 Analysis stored for voice conversation:', analysis);
       return analysis;
     } catch (error) {
       console.error('❌ Failed to analyze math problem:', error);
@@ -253,7 +256,9 @@ export class OpenAIRealtimeService {
   }
 
   private getSystemInstructions(): string {
-    return `You are an expert GCSE mathematics tutor having a real-time voice conversation with a student working on a math problem.
+    return `You are an expert academic tutor having a real-time voice conversation with a student. You can help with any academic subject but focus primarily on mathematics and GCSE-level content.
+
+Language: Always default to English. Only change to a different language if the student explicitly speaks to you in that language first. If unsure about the student's language preference, continue in English.
 
 Core Teaching Principles:
 - Use the Socratic method - ask guiding questions rather than giving direct answers
@@ -263,6 +268,13 @@ Core Teaching Principles:
 - Point out mistakes gently and guide them to corrections
 - Celebrate progress and understanding
 
+Teaching Flexibility:
+- Your PRIMARY focus is helping with the uploaded math problem
+- You can also answer related questions that come up naturally during tutoring
+- If students ask about concepts, background theory, or similar problems, feel free to help
+- You can explain prerequisite knowledge needed for the main problem
+- Stay academically focused but allow natural conversation flow
+
 Conversation Style:
 - Speak naturally as if you're having a phone conversation
 - Use a warm, encouraging tone
@@ -271,19 +283,18 @@ Conversation Style:
 - Keep responses concise but helpful
 - You can be interrupted - that's natural conversation!
 
-The student has uploaded a math problem and will be working on it using a digital whiteboard. Guide them through solving it step by step.`;
+The student has uploaded a math problem and will be working on it using a digital whiteboard. While your main goal is guiding them through this problem, feel free to address related questions and provide broader academic support as needed.
+
+${this.mathProblemAnalysis ? `\n\nMAIN PROBLEM TO WORK ON:\n${this.mathProblemAnalysis}\n\nThis is the primary problem you're helping with, but you can discuss related concepts and answer the student's questions along the way.` : ''}`;
   }
 
   private sendInitialGreeting(): void {
     if (!this.dataChannel || !this.isConnected) return;
 
-    // Just trigger a response - let the AI start naturally
+    // Just trigger a response using the system instructions (which include the math problem analysis)
     const responseCreate = {
-      type: 'response.create',
-      response: {
-        modalities: ['text', 'audio'],
-        instructions: "Greet the student as their math tutor. Mention that you're ready to help them with their math problem and ask how they'd like to start."
-      }
+      type: 'response.create'
+      // No custom instructions - use the system instructions that contain the actual problem analysis
     };
     this.dataChannel.send(JSON.stringify(responseCreate));
   }
@@ -372,7 +383,7 @@ The student has uploaded a math problem and will be working on it using a digita
             content: [
               {
                 type: 'input_text',
-                text: `I just updated my whiteboard. Here's what I wrote: ${analysis}. Can you give me feedback on my work?`
+                text: `I just updated my whiteboard. Here's what I wrote: ${analysis}. Can you give me feedback on my work based on the original problem analysis you have?`
               }
             ]
           }
@@ -435,6 +446,7 @@ The student has uploaded a math problem and will be working on it using a digita
     
     this.isConnected = false;
     this.currentSession = null;
+    this.mathProblemAnalysis = null; // Clear analysis for fresh start
     console.log('✅ Disconnected from OpenAI Realtime Service');
   }
 

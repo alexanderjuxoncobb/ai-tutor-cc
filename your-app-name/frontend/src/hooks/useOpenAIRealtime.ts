@@ -4,7 +4,7 @@ import { OpenAIRealtimeService, type OpenAIRealtimeConfig, type WhiteboardImageD
 export interface UseOpenAIRealtimeOptions {
   apiKey: string;
   autoConnect?: boolean;
-  voice?: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
+  voice?: 'alloy' | 'ash' | 'ballad' | 'coral' | 'echo' | 'sage' | 'shimmer' | 'verse';
 }
 
 export function useOpenAIRealtime({ apiKey, autoConnect = false, voice = 'alloy' }: UseOpenAIRealtimeOptions) {
