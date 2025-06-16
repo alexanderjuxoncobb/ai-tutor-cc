@@ -18,6 +18,8 @@ function App() {
   const [debugImage, setDebugImage] = useState<string | null>(null);
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [sessionStatus, setSessionStatus] = useState<string>('');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const isAnalyzingRef = useRef(false);
   const pendingAnalysisRef = useRef(false);
 
@@ -170,80 +172,271 @@ function App() {
     // Note: We're now using stroke completion detection instead of every change
   };
 
+  // Helper function to validate API key
+  const isValidApiKey = (key: string) => {
+    return key.startsWith('sk-') && key.length > 20;
+  };
+
+  // Helper function to get connection status
+  const getConnectionStatus = () => {
+    if (!apiKey) return { status: 'inactive', text: 'API Key Required' };
+    if (isConnecting) return { status: 'connecting', text: 'Connecting...' };
+    if (isConnected && isRecording) return { status: 'recording', text: 'Recording' };
+    if (isConnected) return { status: 'connected', text: 'Connected' };
+    if (isSessionActive) return { status: 'connecting', text: 'Starting...' };
+    return { status: 'ready', text: 'Ready' };
+  };
+
+  const connectionStatus = getConnectionStatus();
+
   return (
     <div className="math-tutor-app">
-      <header>
-        <h1>AI Math Tutor</h1>
-        <p>
-          Upload a math problem and collaborate with your AI tutor on an interactive whiteboard
-        </p>
-      </header>
-
-      <main>
-        <div className="controls-column">
-          <ApiKeySection 
-            apiKey={apiKey}
-            setApiKey={setApiKey}
-            selectedVoice={selectedVoice}
-            setSelectedVoice={setSelectedVoice}
-            error={error}
-          />
-
-          {sessionError && (
-            <div className="status-message error">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-              {sessionError}
-              <button 
-                onClick={() => setSessionError(null)}
-                className="btn btn-outline"
-                style={{ marginLeft: 'auto', padding: 'var(--space-1) var(--space-2)' }}
-              >
-                ✕
-              </button>
+      {/* Single Horizontal Toolbar */}
+      <div className="main-toolbar">
+        <div className="toolbar-content">
+          {/* Left Side: Brand + Start AI Tutor */}
+          <div className="toolbar-left">
+            {/* Brand */}
+            <div className="toolbar-section brand">
+              <div className="brand-icon">🧮</div>
+              <h1 className="brand-title">AI Math Tutor</h1>
             </div>
-          )}
-
-          {sessionStatus && (
-            <div className="status-message info">
-              <div className="loading-spinner"></div>
-              {sessionStatus}
+            
+            {/* Start AI Tutor / End Session */}
+            <div className="toolbar-section">
+              {!isSessionActive ? (
+                <button
+                  onClick={startTutorSession}
+                  disabled={!apiKey || isConnecting}
+                  className="btn btn-success btn-lg"
+                >
+                  {isConnecting ? (
+                    <>
+                      <div className="loading-spinner-inline"></div>
+                      Starting...
+                    </>
+                  ) : (
+                    <>
+                      🎤 Start AI Tutor
+                    </>
+                  )}
+                </button>
+              ) : (
+                <button
+                  onClick={endTutorSession}
+                  className="btn btn-danger btn-lg"
+                >
+                  ⏹️ End Session
+                </button>
+              )}
             </div>
-          )}
+          </div>
 
-          <ImageUploadSection 
-            uploadedImage={uploadedImage}
-            fileInputRef={fileInputRef}
-            onImageUpload={handleImageUpload}
-            onChooseImageClick={triggerFileSelect}
-            mathProblemAnalysis={mathProblemAnalysis}
-          />
+          {/* Right Side: Form Entries */}
+          <div className="toolbar-right">
+            {/* API Key */}
+            <div className="toolbar-section">
+              <div className={`control-group ${!apiKey ? 'status-error' : isValidApiKey(apiKey) ? 'status-success' : 'status-error'}`}>
+                <label className="control-label">API Key</label>
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="sk-..."
+                  className="control-input input"
+                />
+              </div>
+            </div>
 
-          <SessionControlsSection 
-            isSessionActive={isSessionActive}
-            isConnected={isConnected}
-            isConnecting={isConnecting}
-            isRecording={isRecording}
-            selectedVoice={selectedVoice}
-            uploadedImage={uploadedImage}
-            apiKey={apiKey}
-            onStartSession={startTutorSession}
-            onEndSession={endTutorSession}
-            onManualWhiteboardCapture={handleManualWhiteboardCapture}
-          />
+            {/* Math Problem Upload */}
+            <div className="toolbar-section">
+              <div className={`control-group ${uploadedImage ? 'status-success' : 'status-error'}`}>
+                <label className="control-label">Math Problem</label>
+                <div className="upload-container">
+                  <button
+                    onClick={triggerFileSelect}
+                    className="btn btn-secondary"
+                  >
+                    {uploadedImage ? '📷 Change Image' : '📁 Upload Image'}
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    style={{ display: 'none' }}
+                  />
+                  {uploadedImage && (
+                    <div className="image-preview-inline" onClick={() => setIsImageModalOpen(true)}>
+                      <img 
+                        src={uploadedImage} 
+                        alt="Uploaded math problem" 
+                        className="preview-image-small"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
 
+            {/* Voice Selection */}
+            <div className="toolbar-section">
+              <div className="control-group">
+                <label className="control-label">Voice</label>
+                <select
+                  value={selectedVoice}
+                  onChange={(e) => setSelectedVoice(e.target.value as any)}
+                  className="control-input select"
+                  title="Change AI voice"
+                >
+                  <option value="alloy">Alloy</option>
+                  <option value="ash">Ash</option>
+                  <option value="ballad">Ballad</option>
+                  <option value="coral">Coral</option>
+                  <option value="echo">Echo</option>
+                  <option value="sage">Sage</option>
+                  <option value="shimmer">Shimmer</option>
+                  <option value="verse">Verse</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile Menu Toggle */}
+          <button
+            className="mobile-menu-toggle"
+            onClick={() => setIsMobileMenuOpen(true)}
+            aria-label="Open menu"
+          >
+            ☰
+          </button>
+        </div>
+      </div>
+
+      {/* Status Messages */}
+      {sessionError && (
+        <div className="status-message error" style={{ margin: 'var(--space-4) var(--space-6)' }}>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+          </svg>
+          {sessionError}
+          <button 
+            onClick={() => setSessionError(null)}
+            className="btn btn-outline"
+            style={{ marginLeft: 'auto', padding: 'var(--space-1) var(--space-2)' }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {sessionStatus && (
+        <div className="status-message info" style={{ margin: 'var(--space-4) var(--space-6)' }}>
+          <div className="loading-spinner"></div>
+          {sessionStatus}
+        </div>
+      )}
+
+      {/* Mobile Controls Overlay */}
+      <div 
+        className={`mobile-controls-overlay ${isMobileMenuOpen ? 'open' : ''}`}
+        onClick={() => setIsMobileMenuOpen(false)}
+      >
+        <div 
+          className={`mobile-controls-panel ${isMobileMenuOpen ? 'open' : ''}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="mobile-controls-header">
+            <h3>Controls</h3>
+            <button
+              className="mobile-controls-close"
+              onClick={() => setIsMobileMenuOpen(false)}
+              aria-label="Close menu"
+            >
+              ✕
+            </button>
+          </div>
+          
+          {/* Mobile API Key Section */}
+          <div style={{ marginBottom: 'var(--space-6)' }}>
+            <ApiKeySection 
+              apiKey={apiKey}
+              setApiKey={setApiKey}
+              selectedVoice={selectedVoice}
+              setSelectedVoice={setSelectedVoice}
+              error={error}
+            />
+          </div>
+
+          {/* Mobile Image Upload Section */}
+          <div style={{ marginBottom: 'var(--space-6)' }}>
+            <ImageUploadSection 
+              uploadedImage={uploadedImage}
+              fileInputRef={fileInputRef}
+              onImageUpload={handleImageUpload}
+              onChooseImageClick={triggerFileSelect}
+              mathProblemAnalysis={mathProblemAnalysis}
+            />
+          </div>
+
+          {/* Mobile Session Controls */}
+          <div style={{ marginBottom: 'var(--space-6)' }}>
+            <SessionControlsSection 
+              isSessionActive={isSessionActive}
+              isConnected={isConnected}
+              isConnecting={isConnecting}
+              isRecording={isRecording}
+              selectedVoice={selectedVoice}
+              uploadedImage={uploadedImage}
+              apiKey={apiKey}
+              onStartSession={startTutorSession}
+              onEndSession={endTutorSession}
+              onManualWhiteboardCapture={handleManualWhiteboardCapture}
+            />
+          </div>
+
+          {/* Mobile Debug Section */}
           <DebugSection 
             debugImage={debugImage}
             onCloseDebug={() => setDebugImage(null)}
           />
         </div>
+      </div>
 
-        <div className="whiteboard-column">
-          <WhiteboardSection 
-            onElementsChange={handleWhiteboardChange}
-            onStrokeCompleted={handleStrokeCompleted}
-          />
+      {/* Image Enlargement Modal */}
+      {isImageModalOpen && uploadedImage && (
+        <div className="image-modal-overlay" onClick={() => setIsImageModalOpen(false)}>
+          <div className="image-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="image-modal-header">
+              <h3>Uploaded Math Problem</h3>
+              <button
+                className="image-modal-close"
+                onClick={() => setIsImageModalOpen(false)}
+                aria-label="Close modal"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="image-modal-body">
+              <img 
+                src={uploadedImage} 
+                alt="Full size math problem" 
+                className="modal-image"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content: Whiteboard */}
+      <main>
+        <div className="whiteboard-container">
+          <div className="whiteboard-wrapper">
+            <WhiteboardSection 
+              onElementsChange={handleWhiteboardChange}
+              onStrokeCompleted={handleStrokeCompleted}
+            />
+          </div>
         </div>
       </main>
     </div>
