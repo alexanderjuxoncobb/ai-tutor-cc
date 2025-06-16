@@ -1,0 +1,144 @@
+/* Whiteboard workspace component styles */
+.whiteboard-workspace {
+  margin-bottom: 24px;
+}
+
+.whiteboard-workspace__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.whiteboard-workspace__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.whiteboard-workspace__info {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.whiteboard-workspace__element-count {
+  padding: 4px 8px;
+  background-color: #e9ecef;
+  border-radius: 4px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.whiteboard-workspace__auto-analysis {
+  padding: 4px 8px;
+  background-color: #d4edda;
+  border-radius: 4px;
+  color: #155724;
+  font-weight: 500;
+}
+
+.whiteboard-workspace__content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.whiteboard-workspace__controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 6px;
+}
+
+.whiteboard-workspace__capture-btn {
+  /* Button styles inherited from Button component */
+}
+
+.whiteboard-workspace__capture-hint {
+  color: #856404;
+  text-align: center;
+  font-style: italic;
+}
+
+.whiteboard-workspace__board {
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.whiteboard-workspace__debug {
+  padding: 16px;
+  background-color: #f8f9fa;
+  border: 2px solid #007bff;
+  border-radius: 8px;
+}
+
+.whiteboard-workspace__debug-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.whiteboard-workspace__debug-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.whiteboard-workspace__debug-close {
+  /* Button styles inherited from Button component */
+}
+
+.whiteboard-workspace__debug-description {
+  margin: 0 0 12px 0;
+  color: #6c757d;
+  font-size: 14px;
+}
+
+.whiteboard-workspace__debug-image-container {
+  display: flex;
+  justify-content: center;
+  padding: 8px;
+  background-color: white;
+  border-radius: 4px;
+}
+
+.whiteboard-workspace__debug-image {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+  .whiteboard-workspace__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .whiteboard-workspace__info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .whiteboard-workspace__debug-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+}

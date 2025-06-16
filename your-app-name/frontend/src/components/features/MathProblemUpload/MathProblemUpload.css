@@ -1,0 +1,85 @@
+/* Math problem upload component styles */
+.math-problem-upload {
+  margin-bottom: 24px;
+}
+
+.math-problem-upload__title {
+  margin: 0 0 16px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.math-problem-upload__content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.math-problem-upload__uploader {
+  /* Inherits styles from ImageUpload component */
+}
+
+.math-problem-upload__analyzing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 6px;
+  color: #856404;
+  font-size: 14px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.math-problem-upload__spinner {
+  animation: spin 1s linear infinite;
+}
+
+.math-problem-upload__analysis {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.math-problem-upload__analysis-title {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.math-problem-upload__analysis-content {
+  color: #6c757d;
+  line-height: 1.6;
+}
+
+.math-problem-upload__analysis-line {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+}
+
+.math-problem-upload__analysis-line:last-child {
+  margin-bottom: 0;
+}
+
+/* Animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

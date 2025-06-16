@@ -1,182 +1,193 @@
+/* Global app styles - enhanced for modular components */
+
 body, html, #root {
   margin: 0;
   padding: 0;
   width: 100vw;
   height: 100vh;
-  background-color: #ffc0cb;
+  background-color: #ffffff;
 }
 
 .math-tutor-app {
-  width: 100vw;
-  height: 100vh;
-  padding: 2rem;
-  box-sizing: border-box;
-  overflow-x: auto;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #ffffff;
+  min-height: 100vh;
 }
 
-header {
+/* Header styles */
+.math-tutor-app header {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 2px solid #e9ecef;
 }
 
-header h1 {
-  color: #2c3e50;
-  margin-bottom: 0.5rem;
-}
-
-header p {
-  color: #7f8c8d;
-  font-size: 1.1rem;
-}
-
-main {
-  display: grid;
-  gap: 2rem;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto auto 1fr;
-  min-height: 80vh;
-  grid-template-areas: 
-    "api-key api-key"
-    "upload tutor"
-    "whiteboard whiteboard";
-}
-
-.upload-section {
-  grid-area: upload;
-  background: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 12px;
-  border: 2px dashed #dee2e6;
-}
-
-.tutor-controls {
-  grid-area: tutor;
-  background: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 12px;
-}
-
-.whiteboard-section {
-  grid-area: whiteboard;
-  background: #ffffff;
-  padding: 1rem;
-  border-radius: 12px;
-  border: 1px solid #dee2e6;
-}
-
-/* Ensure Excalidraw takes full width and height */
-.whiteboard-section .excalidraw {
-  width: 100% !important;
-  height: 500px !important;
-}
-
-.upload-btn, .start-session-btn, .end-session-btn {
-  background: #0000ff;
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.upload-btn:hover, .start-session-btn:hover {
-  background: #0000cc;
-}
-
-.start-session-btn:disabled {
-  background: #6666ff;
-  cursor: not-allowed;
-}
-
-.end-session-btn {
-  background: #0000ff;
-}
-
-.end-session-btn:hover {
-  background: #0000cc;
-}
-
-.uploaded-image {
-  margin-top: 1rem;
-  text-align: center;
-}
-
-.uploaded-image img {
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.session-active {
-  text-align: center;
-}
-
-.session-active p {
-  font-size: 1.1rem;
-  margin-bottom: 1rem;
-}
-
-section h2 {
-  margin-top: 0;
+.math-tutor-app h1 {
+  margin: 0 0 12px 0;
+  font-size: 2.5rem;
+  font-weight: 700;
   color: #495057;
-  font-size: 1.3rem;
+  background: linear-gradient(135deg, #007bff, #28a745);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.api-key-section {
-  grid-area: api-key;
-  background: #f8f9fa;
-  padding: 1.5rem;
+.math-tutor-app header p {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #6c757d;
+  font-weight: 400;
+}
+
+/* Main content layout */
+.math-tutor-app main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Error boundary styles */
+.error-boundary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 20px;
+}
+
+.error-boundary__container {
+  max-width: 600px;
+  text-align: center;
+  padding: 32px;
+  background-color: #f8f9fa;
+  border: 2px solid #e9ecef;
   border-radius: 12px;
-  border: 2px solid #dee2e6;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.api-key-input {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  font-size: 1rem;
-  box-sizing: border-box;
-}
-
-.api-key-input:focus {
-  outline: none;
-  border-color: #0000ff;
-  box-shadow: 0 0 0 2px rgba(0, 0, 255, 0.1);
-}
-
-.error-message {
-  margin-top: 0.5rem;
+.error-boundary__title {
+  margin: 0 0 16px 0;
+  font-size: 24px;
+  font-weight: 600;
   color: #dc3545;
-  font-size: 0.9rem;
-  padding: 0.5rem;
-  background: #f8d7da;
-  border: 1px solid #f5c6cb;
-  border-radius: 4px;
 }
 
-.connection-status {
-  margin-bottom: 1rem;
+.error-boundary__message {
+  margin: 0 0 24px 0;
+  font-size: 16px;
+  color: #6c757d;
+  line-height: 1.5;
 }
 
-.connection-status p {
-  margin: 0.5rem 0;
-  font-size: 0.9rem;
+.error-boundary__actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.error-boundary__details {
+  text-align: left;
+  background-color: #ffffff;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.error-boundary__details-summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: #495057;
+  margin-bottom: 12px;
+}
+
+.error-boundary__details-summary:hover {
+  color: #007bff;
+}
+
+.error-boundary__error-content h4 {
+  margin: 12px 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
   color: #495057;
 }
 
+.error-boundary__error-text {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 12px;
+  font-size: 12px;
+  font-family: 'Courier New', monospace;
+  color: #dc3545;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Responsive design */
 @media (max-width: 768px) {
-  main {
-    grid-template-columns: 1fr;
-    grid-template-areas: 
-      "api-key"
-      "upload"
-      "tutor" 
-      "whiteboard";
+  .math-tutor-app {
+    padding: 16px;
   }
   
+  .math-tutor-app h1 {
+    font-size: 2rem;
+  }
+  
+  .math-tutor-app header p {
+    font-size: 1rem;
+  }
+  
+  .math-tutor-app main {
+    gap: 20px;
+  }
+  
+  .error-boundary__container {
+    padding: 24px 16px;
+  }
+  
+  .error-boundary__actions {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+@media (max-width: 480px) {
   .math-tutor-app {
-    padding: 1rem;
+    padding: 12px;
+  }
+  
+  .math-tutor-app h1 {
+    font-size: 1.75rem;
+  }
+  
+  .error-boundary__container {
+    padding: 20px 12px;
+  }
+}
+
+/* Dark mode support (future enhancement) */
+@media (prefers-color-scheme: dark) {
+  .math-tutor-app {
+    background-color: #1a1a1a;
+    color: #e9ecef;
+  }
+  
+  .math-tutor-app h1 {
+    color: #e9ecef;
+  }
+  
+  .math-tutor-app header {
+    border-bottom-color: #495057;
   }
 }

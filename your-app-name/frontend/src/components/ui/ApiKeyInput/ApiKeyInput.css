@@ -1,0 +1,99 @@
+/* API key input component styles */
+.api-key-input {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.api-key-input__label {
+  font-weight: 500;
+  color: #495057;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.api-key-input__container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  background-color: white;
+  transition: all 0.2s ease;
+}
+
+.api-key-input__container:hover {
+  border-color: #007bff;
+}
+
+.api-key-input--focused .api-key-input__container {
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.api-key-input--invalid .api-key-input__container {
+  border-color: #dc3545;
+}
+
+.api-key-input--disabled .api-key-input__container {
+  background-color: #f8f9fa;
+  border-color: #dee2e6;
+  opacity: 0.6;
+}
+
+.api-key-input__field {
+  flex: 1;
+  padding: 10px 12px;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  background: transparent;
+}
+
+.api-key-input__field::placeholder {
+  color: #6c757d;
+  font-family: inherit;
+}
+
+.api-key-input__field:disabled {
+  cursor: not-allowed;
+}
+
+.api-key-input__actions {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+}
+
+.api-key-input__toggle,
+.api-key-input__clear {
+  padding: 4px 8px !important;
+  min-height: 24px !important;
+  font-size: 12px !important;
+}
+
+.api-key-input__validation {
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+
+.api-key-input__validation.valid {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+.api-key-input__validation.invalid {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+}
+
+.api-key-input__success,
+.api-key-input__error {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}

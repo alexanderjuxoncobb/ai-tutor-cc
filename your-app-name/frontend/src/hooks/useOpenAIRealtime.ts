@@ -176,6 +176,18 @@ export function useOpenAIRealtime({ apiKey, autoConnect = false, voice = 'alloy'
     };
   }, []);
 
+  const getConversationContext = useCallback(() => {
+    return realtimeService.current?.getConversationContext() || null;
+  }, []);
+
+  const clearConversationContext = useCallback(() => {
+    realtimeService.current?.clearConversationContext();
+  }, []);
+
+  const getContextSummary = useCallback(() => {
+    return realtimeService.current?.getContextSummary() || 'Service not initialized';
+  }, []);
+
   return {
     // State
     isConnected,
@@ -191,6 +203,11 @@ export function useOpenAIRealtime({ apiKey, autoConnect = false, voice = 'alloy'
     startVoiceRecording,
     stopVoiceRecording,
     analyzeWhiteboard,
+
+    // Context management
+    getConversationContext,
+    clearConversationContext,
+    getContextSummary,
 
     // Service reference (for advanced usage)
     service: realtimeService.current,

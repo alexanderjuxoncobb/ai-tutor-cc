@@ -52,12 +52,25 @@ export default function Whiteboard({ onElementsChange, onStrokeCompleted }: Whit
 
   return (
     <div 
-      style={{ height: '500px', width: '100%' }}
+      style={{ height: '1000px', width: '100%' }}
       onPointerUp={handlePointerUp}
       onPointerDown={handlePointerDown}
     >
+      <style>{`
+        .excalidraw .Island:not(.App-toolbar) {
+          transform: scale(0.6);
+          transform-origin: top left;
+        }
+      `}</style>
       <Excalidraw
         onChange={handleChange}
+        initialData={{
+          appState: {
+            activeTool: {
+              locked: true
+            }
+          }
+        }}
       />
     </div>
   );

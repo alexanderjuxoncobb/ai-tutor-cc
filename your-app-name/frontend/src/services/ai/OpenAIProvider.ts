@@ -1,17 +1,19 @@
 import OpenAI from 'openai';
+import { AIProvider } from '../../core/AIProvider';
+import type { WhiteboardImageData, AIProviderConfig } from '../../core/types';
 
-export interface OpenAIRealtimeConfig {
-  apiKey: string;
-  model?: string;
-  voice?: 'alloy' | 'ash' | 'ballad' | 'coral' | 'echo' | 'sage' | 'shimmer' | 'verse';
+interface EphemeralSession {
+  client_secret: {
+    value: string;
+    expires_at: number;
+  };
+  id: string;
+  created_at: number;
+  expires_at: number;
+  object: string;
 }
 
-export interface WhiteboardImageData {
-  data: string; // base64 encoded image
-  mimeType: string;
-}
-
-export interface ConversationContext {
+interface ConversationContext {
   teacherReference: {
     problemAnalysis: string | null;
     solutionFramework: string | null;
@@ -30,24 +32,10 @@ export interface ConversationContext {
   };
 }
 
-export interface EphemeralSession {
-  client_secret: {
-    value: string;
-    expires_at: number;
-  };
-  id: string;
-  created_at: number;
-  expires_at: number;
-  object: string;
-}
-
-export class OpenAIRealtimeService {
-  private config: OpenAIRealtimeConfig;
+export class OpenAIProvider extends AIProvider {
   private openai: OpenAI;
   private peerConnection: RTCPeerConnection | null = null;
   private dataChannel: RTCDataChannel | null = null;
-  private isConnected = false;
-  private isRecording = false;
   private currentSession: EphemeralSession | null = null;
   private audioElement: HTMLAudioElement | null = null;
   private conversationContext: ConversationContext = {
@@ -61,22 +49,17 @@ export class OpenAIRealtimeService {
     }
   };
 
-  constructor(config: OpenAIRealtimeConfig) {
-    this.config = {
-      model: 'gpt-4o-realtime-preview-2025-06-03',
-      voice: 'alloy',
-      ...config,
-    };
-
+  constructor(config: AIProviderConfig) {
+    super(config);
+    
     this.openai = new OpenAI({
       apiKey: this.config.apiKey,
       dangerouslyAllowBrowser: true,
     });
 
-    console.log('🤖 OpenAI Realtime Service initialized');
+    console.log('🤖 OpenAI Provider initialized');
   }
 
-  // Analyze math problem image using Vision API
   async analyzeMathProblem(imageData: string): Promise<string> {
     try {
       console.log('🔍 Analyzing math problem with OpenAI Vision...');
@@ -113,21 +96,25 @@ export class OpenAIRealtimeService {
       const analysis = response.choices[0].message.content || '';
       this.conversationContext.teacherReference.problemAnalysis = analysis;
       this.conversationContext.teacherReference.solutionFramework = analysis; // For now, same as analysis
+      this.updateState({ mathProblemAnalysis: analysis });
+      
       console.log('✅ Math problem analyzed successfully');
       console.log('📚 Analysis stored as teacher reference material:', analysis);
       return analysis;
     } catch (error) {
       console.error('❌ Failed to analyze math problem:', error);
+      this.setError(error as Error);
       throw error;
     }
   }
 
-  // Start voice conversation using WebRTC
-  async startVoiceConversation(): Promise<void> {
+  async connect(): Promise<void> {
     try {
       console.log('🔑 Getting ephemeral key for OpenAI Realtime API...');
+      this.updateState({ isConnecting: true });
+      this.clearError();
       
-      // Get ephemeral key from our backend
+      // Get ephemeral key from backend
       const sessionResponse = await fetch('http://localhost:5000/api/realtime/session', {
         method: 'POST',
         headers: {
@@ -145,124 +132,98 @@ export class OpenAIRealtimeService {
       }
 
       this.currentSession = await sessionResponse.json();
-      console.log('✅ Ephemeral key obtained, expires at:', new Date(this.currentSession!.expires_at * 1000));
+      console.log('✅ Ephemeral key obtained');
 
-      // Initialize WebRTC connection according to official docs
       await this.initializeWebRTCConnection();
-
+      
+      this.updateState({ 
+        isConnected: true, 
+        isConnecting: false 
+      });
+      
     } catch (error) {
-      console.error('❌ Failed to start voice conversation:', error);
+      console.error('❌ Failed to connect:', error);
+      this.setError(error as Error);
+      this.updateState({ isConnecting: false });
       throw error;
     }
   }
 
   private async initializeWebRTCConnection(): Promise<void> {
-    try {
-      console.log('🌐 Initializing WebRTC connection...');
+    console.log('🌐 Initializing WebRTC connection...');
 
-      // Create peer connection
-      this.peerConnection = new RTCPeerConnection();
+    this.peerConnection = new RTCPeerConnection();
 
-      // Set up to play remote audio from the model
-      this.audioElement = document.createElement("audio");
-      this.audioElement.autoplay = true;
-      this.peerConnection.ontrack = (e) => {
-        console.log('🔊 Receiving audio track from OpenAI');
-        if (this.audioElement) {
-          this.audioElement.srcObject = e.streams[0];
-        }
-      };
-
-      // Add local audio track for microphone input
-      console.log('🎤 Getting user media...');
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: true
-      });
-      
-      // Add the audio track
-      const audioTrack = mediaStream.getTracks()[0];
-      this.peerConnection.addTrack(audioTrack, mediaStream);
-      console.log('✅ Audio track added to peer connection');
-
-      // Set up data channel for sending and receiving events
-      this.dataChannel = this.peerConnection.createDataChannel("oai-events");
-      
-      this.dataChannel.addEventListener("open", () => {
-        console.log('✅ Data channel opened');
-        this.isConnected = true;
-        this.configureSession();
-      });
-
-      this.dataChannel.addEventListener("message", (e) => {
-        const event = JSON.parse(e.data);
-        this.handleRealtimeEvent(event);
-      });
-
-      this.dataChannel.addEventListener("error", (error) => {
-        console.error('❌ Data channel error:', error);
-        // Don't treat user-initiated abort as a fatal error
-        if (error.error?.name !== 'OperationError') {
-          this.isConnected = false;
-        }
-      });
-
-      this.dataChannel.addEventListener("close", () => {
-        console.log('📡 Data channel closed');
-        this.isConnected = false;
-      });
-
-      // Start the session using SDP offer/answer
-      console.log('📤 Creating WebRTC offer...');
-      const offer = await this.peerConnection.createOffer();
-      await this.peerConnection.setLocalDescription(offer);
-
-      // Send offer to OpenAI according to official docs
-      const baseUrl = "https://api.openai.com/v1/realtime";
-      const model = this.config.model;
-      const ephemeralKey = this.currentSession!.client_secret.value;
-
-      console.log('📡 Sending offer to OpenAI Realtime API...');
-      const sdpResponse = await fetch(`${baseUrl}?model=${model}`, {
-        method: "POST",
-        body: offer.sdp,
-        headers: {
-          Authorization: `Bearer ${ephemeralKey}`,
-          "Content-Type": "application/sdp"
-        },
-      });
-
-      if (!sdpResponse.ok) {
-        const errorText = await sdpResponse.text();
-        throw new Error(`WebRTC handshake failed: ${sdpResponse.status} - ${errorText}`);
+    this.audioElement = document.createElement("audio");
+    this.audioElement.autoplay = true;
+    this.peerConnection.ontrack = (e) => {
+      if (this.audioElement) {
+        this.audioElement.srcObject = e.streams[0];
       }
+    };
 
-      const answerSdp = await sdpResponse.text();
-      const answer = {
-        type: "answer" as RTCSdpType,
-        sdp: answerSdp,
-      };
-      
-      await this.peerConnection.setRemoteDescription(answer);
-      console.log('✅ WebRTC connection established with OpenAI');
+    const mediaStream = await navigator.mediaDevices.getUserMedia({
+      audio: true
+    });
+    
+    const audioTrack = mediaStream.getTracks()[0];
+    this.peerConnection.addTrack(audioTrack, mediaStream);
 
-    } catch (error) {
-      console.error('❌ Failed to initialize WebRTC:', error);
-      throw error;
+    this.dataChannel = this.peerConnection.createDataChannel("oai-events");
+    
+    this.dataChannel.addEventListener("open", () => {
+      console.log('✅ Data channel opened');
+      this.configureSession();
+    });
+
+    this.dataChannel.addEventListener("message", (e) => {
+      const event = JSON.parse(e.data);
+      this.handleRealtimeEvent(event);
+    });
+
+    this.dataChannel.addEventListener("error", (error) => {
+      console.error('❌ Data channel error:', error);
+    });
+
+    const offer = await this.peerConnection.createOffer();
+    await this.peerConnection.setLocalDescription(offer);
+
+    const baseUrl = "https://api.openai.com/v1/realtime";
+    const model = this.config.model || 'gpt-4o-realtime-preview-2025-06-03';
+    const ephemeralKey = this.currentSession!.client_secret.value;
+
+    const sdpResponse = await fetch(`${baseUrl}?model=${model}`, {
+      method: "POST",
+      body: offer.sdp,
+      headers: {
+        Authorization: `Bearer ${ephemeralKey}`,
+        "Content-Type": "application/sdp"
+      },
+    });
+
+    if (!sdpResponse.ok) {
+      throw new Error(`WebRTC handshake failed: ${sdpResponse.status}`);
     }
+
+    const answerSdp = await sdpResponse.text();
+    const answer = {
+      type: "answer" as RTCSdpType,
+      sdp: answerSdp,
+    };
+    
+    await this.peerConnection.setRemoteDescription(answer);
+    console.log('✅ WebRTC connection established');
   }
 
   private configureSession(): void {
-    if (!this.dataChannel || !this.isConnected) return;
+    if (!this.dataChannel) return;
 
-    console.log('🔧 Configuring session...');
-
-    // Configure the session according to the docs
     const sessionUpdate = {
       type: 'session.update',
       session: {
         modalities: ['text', 'audio'],
         instructions: this.getSystemInstructions(),
-        voice: this.config.voice,
+        voice: this.config.voice || 'alloy',
         input_audio_format: 'pcm16',
         output_audio_format: 'pcm16',
         input_audio_transcription: {
@@ -278,16 +239,16 @@ export class OpenAIRealtimeService {
     };
 
     this.dataChannel.send(JSON.stringify(sessionUpdate));
-    console.log('✅ Session configured');
-
+    
     // Send initial greeting
-    this.sendInitialGreeting();
+    const responseCreate = { type: 'response.create' };
+    this.dataChannel.send(JSON.stringify(responseCreate));
   }
 
   private getSystemInstructions(): string {
     return `You are an expert academic tutor having a real-time voice conversation with a student. You can help with any academic subject but focus primarily on mathematics and GCSE-level content.
 
-Language: Always default to English. Only change to a different language if the student explicitly speaks to you in that language first. If unsure about the student's language preference, continue in English.
+Language: Always default to English. Only change to a different language if the student explicitly speaks to you in that language first.
 
 Core Teaching Principles:
 - Use the Socratic method - ask guiding questions rather than giving direct answers
@@ -295,22 +256,6 @@ Core Teaching Principles:
 - Explain concepts step-by-step
 - Help students discover solutions themselves
 - Point out mistakes gently and guide them to corrections
-- Celebrate progress and understanding
-
-Teaching Flexibility:
-- Your PRIMARY focus is helping with the uploaded math problem
-- You can also answer related questions that come up naturally during tutoring
-- If students ask about concepts, background theory, or similar problems, feel free to help
-- You can explain prerequisite knowledge needed for the main problem
-- Stay academically focused but allow natural conversation flow
-
-Conversation Style:
-- Speak naturally as if you're having a phone conversation
-- Use a warm, encouraging tone
-- Ask "Can you tell me..." or "What do you think about..." 
-- Respond to what the student says in real-time
-- Keep responses concise but helpful
-- You can be interrupted - that's natural conversation!
 
 Memory and Context:
 - You have access to the complete conversation history including the original problem and all whiteboard work
@@ -318,7 +263,7 @@ Memory and Context:
 - Connect current questions to earlier parts of the problem
 - Help students see the bigger picture by referencing their journey so far
 
-The student has uploaded a math problem and will be working on it using a digital whiteboard. While your main goal is guiding them through this problem, feel free to address related questions and provide broader academic support as needed.
+The student has uploaded a math problem and will be working on it using a digital whiteboard.
 
 ${this.getContextualInstructions()}`;
   }
@@ -357,7 +302,7 @@ ${this.conversationContext.teacherReference.problemAnalysis}
     
     // Include recent conversation history for context
     if (conversationHistory.length > 0) {
-      const recentHistory = conversationHistory.slice(-10); // Last 10 exchanges
+      const recentHistory = conversationHistory.slice(-10);
       instructions += `\n\n💬 RECENT VOICE CONVERSATION (actual exchanges with student):`;
       recentHistory.forEach((entry, index) => {
         const timeAgo = Math.round((Date.now() - entry.timestamp) / 1000);
@@ -373,15 +318,33 @@ ${this.conversationContext.teacherReference.problemAnalysis}
     return instructions;
   }
 
-  private sendInitialGreeting(): void {
-    if (!this.dataChannel || !this.isConnected) return;
+  private async updateSessionContext(): Promise<void> {
+    if (!this.dataChannel) return;
 
-    // Just trigger a response using the system instructions (which include the math problem analysis)
-    const responseCreate = {
-      type: 'response.create'
-      // No custom instructions - use the system instructions that contain the actual problem analysis
+    console.log('🔄 Updating session context with latest conversation history...');
+
+    const sessionUpdate = {
+      type: 'session.update',
+      session: {
+        modalities: ['text', 'audio'],
+        instructions: this.getSystemInstructions(),
+        voice: this.config.voice || 'alloy',
+        input_audio_format: 'pcm16',
+        output_audio_format: 'pcm16',
+        input_audio_transcription: {
+          model: 'whisper-1'
+        },
+        turn_detection: {
+          type: 'server_vad',
+          threshold: 0.5,
+          prefix_padding_ms: 300,
+          silence_duration_ms: 200
+        }
+      }
     };
-    this.dataChannel.send(JSON.stringify(responseCreate));
+
+    this.dataChannel.send(JSON.stringify(sessionUpdate));
+    console.log('✅ Session context updated with full conversation history');
   }
 
   private handleRealtimeEvent(event: any): void {
@@ -444,6 +407,7 @@ ${this.conversationContext.teacherReference.problemAnalysis}
         
       case 'error':
         console.error('❌ Realtime API error:', event.error);
+        this.setError(event.error.message || 'Realtime API error');
         break;
 
       default:
@@ -451,40 +415,8 @@ ${this.conversationContext.teacherReference.problemAnalysis}
     }
   }
 
-  private async updateSessionContext(): Promise<void> {
-    if (!this.dataChannel || !this.isConnected) return;
-
-    console.log('🔄 Updating session context with latest conversation history...');
-
-    const sessionUpdate = {
-      type: 'session.update',
-      session: {
-        modalities: ['text', 'audio'],
-        instructions: this.getSystemInstructions(),
-        voice: this.config.voice,
-        input_audio_format: 'pcm16',
-        output_audio_format: 'pcm16',
-        input_audio_transcription: {
-          model: 'whisper-1'
-        },
-        turn_detection: {
-          type: 'server_vad',
-          threshold: 0.5,
-          prefix_padding_ms: 300,
-          silence_duration_ms: 200
-        }
-      }
-    };
-
-    this.dataChannel.send(JSON.stringify(sessionUpdate));
-    console.log('✅ Session context updated with full conversation history');
-  }
-
-  // Analyze whiteboard and send to conversation
   async analyzeWhiteboard(imageData: WhiteboardImageData): Promise<void> {
     try {
-      console.log('📝 Analyzing whiteboard...');
-
       const response = await this.openai.chat.completions.create({
         model: 'gpt-4o',
         messages: [
@@ -493,7 +425,7 @@ ${this.conversationContext.teacherReference.problemAnalysis}
             content: [
               {
                 type: 'text',
-                text: `Analyze this whiteboard drawing. The student is working on a math problem. Describe what work you can see and whether the approach looks correct. Be brief and specific - this will be sent to an ongoing voice conversation.`
+                text: `Analyze this whiteboard drawing. The student is working on a math problem. Describe what work you can see and whether the approach looks correct. Be brief and specific.`
               },
               {
                 type: 'image_url',
@@ -522,14 +454,12 @@ ${this.conversationContext.teacherReference.problemAnalysis}
         this.conversationContext.studentProgress.whiteboardHistory = this.conversationContext.studentProgress.whiteboardHistory.slice(-10);
       }
 
-      // Check if we can send to the voice conversation
-      if (this.isConnected && this.dataChannel && this.dataChannel.readyState === 'open') {
+      if (this.dataChannel && this.dataChannel.readyState === 'open') {
         console.log('📤 Sending whiteboard analysis with full context to voice conversation...');
         
         // Update session with new context to include full history
         await this.updateSessionContext();
         
-        // Send whiteboard context as a user message
         const userMessage = {
           type: 'conversation.item.create',
           item: {
@@ -545,37 +475,27 @@ ${this.conversationContext.teacherReference.problemAnalysis}
         };
 
         this.dataChannel.send(JSON.stringify(userMessage));
-
-        // Trigger AI response
-        const responseCreate = {
-          type: 'response.create'
-        };
-        this.dataChannel.send(JSON.stringify(responseCreate));
+        this.dataChannel.send(JSON.stringify({ type: 'response.create' }));
         
         console.log('✅ Whiteboard update sent to voice conversation with full context');
       } else {
         console.warn('⚠️ Cannot send whiteboard update - voice conversation not active');
-        console.log('Connection state:', {
-          isConnected: this.isConnected,
-          dataChannelExists: !!this.dataChannel,
-          dataChannelState: this.dataChannel?.readyState
-        });
       }
 
     } catch (error) {
       console.error('❌ Failed to analyze whiteboard:', error);
+      this.setError(error as Error);
       throw error;
     }
   }
 
   async startVoiceRecording(): Promise<void> {
-    // Voice recording is automatically handled by WebRTC
-    this.isRecording = true;
+    this.updateState({ isRecording: true });
     console.log('🎤 Voice recording active via WebRTC');
   }
 
   stopVoiceRecording(): void {
-    this.isRecording = false;
+    this.updateState({ isRecording: false });
     console.log('🛑 Voice recording stopped');
   }
 
@@ -599,7 +519,6 @@ ${this.conversationContext.teacherReference.problemAnalysis}
       this.audioElement = null;
     }
     
-    this.isConnected = false;
     this.currentSession = null;
     
     // Clear conversation context for fresh start
@@ -614,25 +533,17 @@ ${this.conversationContext.teacherReference.problemAnalysis}
       }
     };
     
-    console.log('✅ Disconnected from OpenAI Realtime Service and cleared conversation context');
+    this.updateState({
+      isConnected: false,
+      isConnecting: false,
+      isRecording: false,
+      mathProblemAnalysis: null
+    });
+    
+    console.log('✅ Disconnected from OpenAI and cleared conversation context');
   }
 
-  isConnectionActive(): boolean {
-    return this.isConnected;
-  }
-
-  getConnectionStatus() {
-    return {
-      isConnected: this.isConnected,
-      isRecording: this.isRecording,
-      dataChannelExists: !!this.dataChannel,
-      dataChannelState: this.dataChannel?.readyState,
-      peerConnectionExists: !!this.peerConnection,
-      peerConnectionState: this.peerConnection?.connectionState,
-      hasSession: !!this.currentSession
-    };
-  }
-
+  // Context management methods
   getConversationContext(): ConversationContext {
     return { ...this.conversationContext };
   }
