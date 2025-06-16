@@ -304,7 +304,7 @@ ${this.conversationContext.teacherReference.problemAnalysis}
     if (conversationHistory.length > 0) {
       const recentHistory = conversationHistory.slice(-10);
       instructions += `\n\n💬 RECENT VOICE CONVERSATION (actual exchanges with student):`;
-      recentHistory.forEach((entry, index) => {
+      recentHistory.forEach((entry, _index) => {
         const timeAgo = Math.round((Date.now() - entry.timestamp) / 1000);
         const speaker = entry.type === 'user' ? 'Student' : 'You (AI Tutor)';
         instructions += `\n${speaker} (${timeAgo}s ago): ${entry.content}`;

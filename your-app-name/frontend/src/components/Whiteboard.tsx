@@ -44,12 +44,12 @@ export default function Whiteboard({ onElementsChange, onStrokeCompleted }: Whit
         clearTimeout(debounceTimerRef.current);
       }
       
-      // Set new timer for 300ms debounce
+      // Set new timer for 1500ms debounce
       debounceTimerRef.current = setTimeout(() => {
         console.log('⏰ Whiteboard: Debounce timer completed - notifying parent');
         onStrokeCompleted();
         debounceTimerRef.current = null;
-      }, 300);
+      }, 1500);
     }
     isDrawingRef.current = false;
   }, [onStrokeCompleted]);
