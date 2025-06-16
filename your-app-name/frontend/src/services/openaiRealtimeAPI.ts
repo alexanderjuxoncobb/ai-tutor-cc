@@ -107,7 +107,8 @@ export class OpenAIRealtimeService {
             ]
           }
         ],
-        max_tokens: 500
+        max_tokens: 1500,
+        temperature: 0.2
       });
 
       const analysis = response.choices[0].message.content || '';
@@ -296,6 +297,7 @@ Core Teaching Principles:
 - Help students discover solutions themselves
 - Point out mistakes gently and guide them to corrections
 - Celebrate progress and understanding
+- Guide students to correct answers through questioning, but gently correct misconceptions
 
 Teaching Flexibility:
 - Your PRIMARY focus is helping with the uploaded math problem
@@ -349,9 +351,9 @@ ${this.conversationContext.teacherReference.problemAnalysis}
     // Include whiteboard history
     if (whiteboardHistory.length > 0) {
       instructions += `\n\n📝 STUDENT'S WHITEBOARD WORK (what they actually drew/wrote):`;
-      whiteboardHistory.forEach((entry, index) => {
+      whiteboardHistory.forEach((entry, _index) => {
         const timeAgo = Math.round((Date.now() - entry.timestamp) / 1000);
-        instructions += `\n${index + 1}. ${timeAgo}s ago: ${entry.analysis}`;
+        instructions += `\n${_index + 1}. ${timeAgo}s ago: ${entry.analysis}`;
       });
     }
     
@@ -359,7 +361,7 @@ ${this.conversationContext.teacherReference.problemAnalysis}
     if (conversationHistory.length > 0) {
       const recentHistory = conversationHistory.slice(-10); // Last 10 exchanges
       instructions += `\n\n💬 RECENT VOICE CONVERSATION (actual exchanges with student):`;
-      recentHistory.forEach((entry, index) => {
+      recentHistory.forEach((entry, _index) => {
         const timeAgo = Math.round((Date.now() - entry.timestamp) / 1000);
         const speaker = entry.type === 'user' ? 'Student' : 'You (AI Tutor)';
         instructions += `\n${speaker} (${timeAgo}s ago): ${entry.content}`;
@@ -493,7 +495,23 @@ ${this.conversationContext.teacherReference.problemAnalysis}
             content: [
               {
                 type: 'text',
-                text: `Analyze this whiteboard drawing. The student is working on a math problem. Describe what work you can see and whether the approach looks correct. Be brief and specific - this will be sent to an ongoing voice conversation.`
+                text: `Analyze this student's whiteboard work for a math problem. Provide structured feedback:
+
+MATHEMATICAL CONTENT:
+1. What mathematical expressions, equations, or diagrams do you see?
+2. What solution approach is the student taking?
+
+ACCURACY CHECK:
+1. Are the mathematical steps correct so far?
+2. Are there any calculation errors?
+3. Are there any conceptual misunderstandings?
+
+NEXT STEPS:
+1. What should the student do next?
+2. What specific guidance or questions would help them progress?
+3. Are there any immediate corrections needed?
+
+Be specific about mathematical content and provide actionable feedback.`
               },
               {
                 type: 'image_url',
@@ -504,7 +522,8 @@ ${this.conversationContext.teacherReference.problemAnalysis}
             ]
           }
         ],
-        max_tokens: 200
+        max_tokens: 800,
+        temperature: 0.1
       });
 
       const analysis = response.choices[0].message.content || '';

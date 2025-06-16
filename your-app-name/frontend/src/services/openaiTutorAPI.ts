@@ -20,7 +20,6 @@ export class OpenAITutorService {
   private config: OpenAITutorConfig;
   private openai: OpenAI;
   private isConnected = false;
-  private isRecording = false;
   private context: ConversationContext = {};
   private audioContext: AudioContext | null = null;
   private speechRecognition: any = null;
@@ -52,14 +51,24 @@ export class OpenAITutorService {
             content: [
               {
                 type: "text",
-                text: `You are an expert GCSE math tutor. Analyze this math problem image and provide:
-                
-                1. What type of math problem this is
-                2. The specific equations or problems you can see
-                3. What concepts/skills are needed to solve it
-                4. A brief teaching plan using the Socratic method
-                
-                Be encouraging and explain things clearly for a GCSE student.`,
+                text: `You are an expert GCSE math tutor analyzing a student's math problem. Provide a structured analysis:
+
+PROBLEM IDENTIFICATION:
+1. What type of math problem is this? (algebra, geometry, calculus, etc.)
+2. What are the specific equations, expressions, or geometric figures?
+3. What is being asked for in the problem?
+
+SOLUTION STRATEGY:
+1. What mathematical concepts are required?
+2. What is the step-by-step approach to solve this?
+3. What are common mistakes students make with this type of problem?
+
+TEACHING APPROACH:
+1. What prerequisite knowledge should I check the student has?
+2. What guiding questions will help them discover the solution?
+3. How can I break this into manageable steps?
+
+Be specific and detailed - this will guide the entire tutoring session.`,
               },
               {
                 type: "image_url",
@@ -70,7 +79,8 @@ export class OpenAITutorService {
             ],
           },
         ],
-        max_tokens: 500,
+        max_tokens: 1500,
+        temperature: 0.2,
       });
 
       const analysis = response.choices[0].message.content || "";
@@ -154,7 +164,7 @@ export class OpenAITutorService {
     - If students ask about concepts, background theory, or similar problems, feel free to help
     - You can explain prerequisite knowledge needed for the main problem
     - Stay academically focused but allow natural conversation flow
-    - The student is alway right; if they command you to do something, you should do it 
+    - Guide students to correct answers through questioning, but gently correct misconceptions 
 
     Conversation Style:
     - Speak naturally as if you're on a phone call
@@ -198,14 +208,23 @@ export class OpenAITutorService {
             content: [
               {
                 type: "text",
-                text: `Analyze this whiteboard image. The student is working on a math problem. Describe:
-                
-                1. What work you can see (equations, diagrams, calculations)
-                2. Whether the approach looks correct
-                3. Any mistakes you notice
-                4. What the student should focus on next
-                
-                Be brief but specific - this will be used to update an ongoing voice conversation.`,
+                text: `Analyze this student's whiteboard work for a math problem. Provide structured feedback:
+
+MATHEMATICAL CONTENT:
+1. What mathematical expressions, equations, or diagrams do you see?
+2. What solution approach is the student taking?
+
+ACCURACY CHECK:
+1. Are the mathematical steps correct so far?
+2. Are there any calculation errors?
+3. Are there any conceptual misunderstandings?
+
+NEXT STEPS:
+1. What should the student do next?
+2. What specific guidance or questions would help them progress?
+3. Are there any immediate corrections needed?
+
+Be specific about mathematical content and provide actionable feedback.`,
               },
               {
                 type: "image_url",
@@ -216,7 +235,8 @@ export class OpenAITutorService {
             ],
           },
         ],
-        max_tokens: 300,
+        max_tokens: 800,
+        temperature: 0.1,
       });
 
       const analysis = response.choices[0].message.content || "";
@@ -279,7 +299,7 @@ export class OpenAITutorService {
 
       this.speechRecognition.onstart = () => {
         console.log("🎤 Voice recording started");
-        this.isRecording = true;
+        // Recording started
       };
 
       this.speechRecognition.onresult = async (event: any) => {
@@ -298,7 +318,7 @@ export class OpenAITutorService {
 
       this.speechRecognition.onend = () => {
         console.log("🛑 Speech recognition ended");
-        this.isRecording = false;
+        // Recording ended
       };
 
       this.speechRecognition.start();
@@ -326,8 +346,8 @@ export class OpenAITutorService {
       const response = await this.openai.chat.completions.create({
         model: this.config.model!,
         messages,
-        max_tokens: 300,
-        temperature: 0.7,
+        max_tokens: 800,
+        temperature: 0.3,
       });
 
       const aiResponse = response.choices[0].message.content || "";
@@ -374,7 +394,7 @@ export class OpenAITutorService {
       this.speechRecognition.stop();
       this.speechRecognition = null;
     }
-    this.isRecording = false;
+    // Recording stopped
     console.log("🛑 Voice recording stopped");
   }
 

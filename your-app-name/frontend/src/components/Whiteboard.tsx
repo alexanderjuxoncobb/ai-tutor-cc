@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { Excalidraw } from '@excalidraw/excalidraw';
 import '@excalidraw/excalidraw/index.css';
 
@@ -10,6 +10,7 @@ interface WhiteboardProps {
 export default function Whiteboard({ onElementsChange, onStrokeCompleted }: WhiteboardProps) {
   const lastElementCountRef = useRef(0);
   const isDrawingRef = useRef(false);
+  const debounceTimerRef = useRef<number | null>(null);
 
   const handleChange = useCallback(
     (elements: readonly any[], _appState: any, _files: any) => {
@@ -34,13 +35,21 @@ export default function Whiteboard({ onElementsChange, onStrokeCompleted }: Whit
   );
 
   const handlePointerUp = useCallback(() => {
-    // When pointer is lifted, check if we were drawing
+    // When pointer is lifted, start debouncing timer
     if (isDrawingRef.current && onStrokeCompleted) {
-      console.log('✅ Whiteboard: Stroke completed - notifying parent');
-      // Small delay to ensure the element is fully committed
-      setTimeout(() => {
+      console.log('✅ Whiteboard: Stroke completed - starting debounce timer');
+      
+      // Clear any existing timer
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      
+      // Set new timer for 300ms debounce
+      debounceTimerRef.current = setTimeout(() => {
+        console.log('⏰ Whiteboard: Debounce timer completed - notifying parent');
         onStrokeCompleted();
-      }, 100);
+        debounceTimerRef.current = null;
+      }, 300);
     }
     isDrawingRef.current = false;
   }, [onStrokeCompleted]);
@@ -48,6 +57,22 @@ export default function Whiteboard({ onElementsChange, onStrokeCompleted }: Whit
   const handlePointerDown = useCallback(() => {
     // Reset drawing state when starting a new action
     isDrawingRef.current = false;
+    
+    // Cancel any pending debounced analysis when starting new stroke
+    if (debounceTimerRef.current) {
+      console.log('🚫 Whiteboard: Cancelling pending analysis - new stroke started');
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+  }, []);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
   }, []);
 
   return (
@@ -66,8 +91,10 @@ export default function Whiteboard({ onElementsChange, onStrokeCompleted }: Whit
         onChange={handleChange}
         initialData={{
           appState: {
+            currentItemStrokeWidth: 1, // Set default stroke width to small (1)
             activeTool: {
-              locked: true
+              type: "freedraw",
+              locked: true // Keep the drawing tool locked/selected
             }
           }
         }}

@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { useAITutorSession } from "./hooks/useAITutorSession";
 import { useImageUpload } from "./hooks/useImageUpload";
-import { captureAndAnalyzeWhiteboard } from "./utils/canvasCapture";
+import { captureAndAnalyzeWhiteboard, captureAndAnalyzeWhiteboardHighQuality } from "./utils/canvasCapture";
 import ApiKeySection from "./components/ApiKeySection";
 import ImageUploadSection from "./components/ImageUploadSection";
 import SessionControlsSection from "./components/SessionControlsSection";
@@ -16,6 +16,8 @@ function App() {
     "alloy" | "ash" | "ballad" | "coral" | "echo" | "sage" | "shimmer" | "verse"
   >("alloy");
   const [debugImage, setDebugImage] = useState<string | null>(null);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [sessionStatus, setSessionStatus] = useState<string>('');
   const isAnalyzingRef = useRef(false);
   const pendingAnalysisRef = useRef(false);
 
@@ -43,46 +45,73 @@ function App() {
 
   const startTutorSession = async () => {
     if (!apiKey) {
-      alert("Please enter your OpenAI API key first!");
+      setSessionError("Please enter your OpenAI API key first!");
       return;
     }
 
     try {
+      setSessionError(null);
       setIsSessionActive(true);
+      setSessionStatus('Starting session...');
       
       // Analyze the uploaded math problem first if available
       if (uploadedImage) {
+        setSessionStatus('Analyzing math problem...');
         console.log("📸 Analyzing math problem image...");
         setDebugImage(uploadedImage);
         await analyzeMathProblem(uploadedImage);
       }
       
       // Start the voice conversation (includes WebRTC setup and microphone access)
+      setSessionStatus('Connecting to AI tutor...');
       console.log("🔄 Starting voice conversation...");
       await connect();
       
+      setSessionStatus('Session active - Ready to help!');
       console.log("✅ AI tutor session started successfully");
-    } catch (err) {
+    } catch (err: any) {
       console.error("❌ Failed to start tutor session:", err);
       setIsSessionActive(false);
+      setSessionStatus('');
+      
+      // Provide user-friendly error messages based on error type
+      if (err.message?.includes('microphone') || err.message?.includes('getUserMedia')) {
+        setSessionError('Microphone access denied. Please allow microphone access and try again.');
+      } else if (err.message?.includes('API key') || err.message?.includes('authentication')) {
+        setSessionError('Invalid API key. Please check your OpenAI API key and try again.');
+      } else if (err.message?.includes('network') || err.message?.includes('fetch')) {
+        setSessionError('Network error. Please check your internet connection and try again.');
+      } else if (err.message?.includes('WebRTC') || err.message?.includes('connection')) {
+        setSessionError('Connection failed. Please refresh the page and try again.');
+      } else {
+        setSessionError(`Session failed: ${err.message || 'Unknown error occurred'}`);
+      }
     }
   };
 
   const endTutorSession = async () => {
     try {
+      setSessionStatus('Ending session...');
       stopVoiceRecording();
       await disconnect();
       setIsSessionActive(false);
+      setSessionStatus('');
+      setSessionError(null);
       console.log("✅ AI tutor session ended");
-    } catch (err) {
+    } catch (err: any) {
       console.error("❌ Error ending tutor session:", err);
+      setSessionError(`Error ending session: ${err.message || 'Unknown error'}`);
+      // Still mark session as inactive even if there was an error
+      setIsSessionActive(false);
+      setSessionStatus('');
     }
   };
 
   const handleManualWhiteboardCapture = async () => {
     console.log("🖼️ Manual whiteboard capture requested...");
     
-    const success = await captureAndAnalyzeWhiteboard(async (imageData) => {
+    // Use high-quality capture for manual analysis
+    const success = await captureAndAnalyzeWhiteboardHighQuality(async (imageData) => {
       // Show debug preview
       const dataUrl = `data:${imageData.mimeType};base64,${imageData.data}`;
       setDebugImage(dataUrl);
@@ -112,7 +141,8 @@ function App() {
     if (isSessionActive && isConnected) {
       isAnalyzingRef.current = true;
       try {
-        const success = await captureAndAnalyzeWhiteboard(analyzeWhiteboard);
+        // Use optimized real-time capture for automatic analysis
+        const success = await captureAndAnalyzeWhiteboard(analyzeWhiteboard, { realTime: true });
         if (success) {
           console.log("✅ Automatic whiteboard analysis completed");
         }
@@ -157,6 +187,45 @@ function App() {
           setSelectedVoice={setSelectedVoice}
           error={error}
         />
+
+        {sessionError && (
+          <div className="error-message" style={{
+            backgroundColor: '#fee2e2',
+            border: '1px solid #fecaca',
+            borderRadius: '8px',
+            padding: '12px',
+            margin: '16px 0',
+            color: '#dc2626'
+          }}>
+            <strong>Error:</strong> {sessionError}
+            <button 
+              onClick={() => setSessionError(null)}
+              style={{
+                marginLeft: '12px',
+                background: 'none',
+                border: 'none',
+                color: '#dc2626',
+                cursor: 'pointer',
+                fontSize: '16px'
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {sessionStatus && (
+          <div className="status-message" style={{
+            backgroundColor: '#dbeafe',
+            border: '1px solid #bfdbfe',
+            borderRadius: '8px',
+            padding: '12px',
+            margin: '16px 0',
+            color: '#1d4ed8'
+          }}>
+            <strong>Status:</strong> {sessionStatus}
+          </div>
+        )}
 
         <ImageUploadSection 
           uploadedImage={uploadedImage}
