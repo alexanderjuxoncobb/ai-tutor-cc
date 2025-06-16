@@ -6,7 +6,8 @@ interface SessionControlsSectionProps {
   isRecording: boolean;
   selectedVoice: string;
   uploadedImage: string | null;
-  apiKey: string;
+  isApiKeyValid: boolean;
+  isValidatingApiKey: boolean;
   onStartSession: () => void;
   onEndSession: () => void;
   onManualWhiteboardCapture: () => void;
@@ -19,7 +20,8 @@ export default function SessionControlsSection({
   isRecording,
   selectedVoice,
   uploadedImage,
-  apiKey,
+  isApiKeyValid,
+  isValidatingApiKey,
   onStartSession,
   onEndSession,
   onManualWhiteboardCapture,
@@ -71,7 +73,7 @@ export default function SessionControlsSection({
             <button
               onClick={onStartSession}
               className="btn btn-primary btn-lg w-full"
-              disabled={!uploadedImage || !apiKey || isConnecting}
+              disabled={!uploadedImage || !isApiKeyValid || isConnecting || isValidatingApiKey}
             >
               {isConnecting ? (
                 <>
@@ -88,10 +90,10 @@ export default function SessionControlsSection({
               )}
             </button>
             
-            {(!uploadedImage || !apiKey) && (
+            {(!uploadedImage || !isApiKeyValid) && (
               <p className="text-sm mt-2" style={{ color: 'var(--gray-500)' }}>
-                {!apiKey && !uploadedImage ? 'Please enter API key and upload a math problem' :
-                 !apiKey ? 'Please enter your OpenAI API key above' :
+                {(!isApiKeyValid && !uploadedImage) ? 'Please enter a valid API key and upload a math problem' :
+                 !isApiKeyValid ? (isValidatingApiKey ? 'Validating API key...' : 'Please enter a valid OpenAI API key above') :
                  'Please upload a math problem image above'}
               </p>
             )}

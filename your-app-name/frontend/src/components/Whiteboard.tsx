@@ -77,7 +77,7 @@ export default function Whiteboard({ onElementsChange, onStrokeCompleted }: Whit
 
   return (
     <div 
-      style={{ height: '70vh', width: '100%' }}
+      style={{ height: '85vh', width: '100%', borderRadius: '0.75rem', overflow: 'hidden' }}
       onPointerUp={handlePointerUp}
       onPointerDown={handlePointerDown}
     >
@@ -85,6 +85,9 @@ export default function Whiteboard({ onElementsChange, onStrokeCompleted }: Whit
         .excalidraw .Island:not(.App-toolbar) {
           transform: scale(0.6);
           transform-origin: top left;
+        }
+        .excalidraw {
+          border-radius: 0.75rem;
         }
       `}</style>
       <Excalidraw

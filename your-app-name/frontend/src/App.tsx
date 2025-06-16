@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAITutorSession } from "./hooks/useAITutorSession";
 import { useImageUpload } from "./hooks/useImageUpload";
 import { captureAndAnalyzeWhiteboard, captureAndAnalyzeWhiteboardHighQuality } from "./utils/canvasCapture";
@@ -20,6 +20,8 @@ function App() {
   const [sessionStatus, setSessionStatus] = useState<string>('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [isApiKeyValid, setIsApiKeyValid] = useState<boolean>(false);
+  const [isValidatingApiKey, setIsValidatingApiKey] = useState<boolean>(false);
   const isAnalyzingRef = useRef(false);
   const pendingAnalysisRef = useRef(false);
 
@@ -43,6 +45,27 @@ function App() {
     voice: selectedVoice,
     autoConnect: false 
   });
+
+  // Validate API key whenever it changes
+  useEffect(() => {
+    let timeoutId: number;
+    
+    if (apiKey) {
+      // Debounce API key validation to avoid too many requests
+      timeoutId = setTimeout(async () => {
+        const isValid = await validateApiKey(apiKey);
+        setIsApiKeyValid(isValid);
+      }, 1000);
+    } else {
+      setIsApiKeyValid(false);
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [apiKey]);
 
 
   const startTutorSession = async () => {
@@ -172,22 +195,35 @@ function App() {
     // Note: We're now using stroke completion detection instead of every change
   };
 
-  // Helper function to validate API key
-  const isValidApiKey = (key: string) => {
+  // Helper function to validate API key format
+  const isValidApiKeyFormat = (key: string) => {
     return key.startsWith('sk-') && key.length > 20;
   };
 
-  // Helper function to get connection status
-  const getConnectionStatus = () => {
-    if (!apiKey) return { status: 'inactive', text: 'API Key Required' };
-    if (isConnecting) return { status: 'connecting', text: 'Connecting...' };
-    if (isConnected && isRecording) return { status: 'recording', text: 'Recording' };
-    if (isConnected) return { status: 'connected', text: 'Connected' };
-    if (isSessionActive) return { status: 'connecting', text: 'Starting...' };
-    return { status: 'ready', text: 'Ready' };
-  };
+  // Function to validate API key by testing it with OpenAI
+  const validateApiKey = async (key: string) => {
+    if (!isValidApiKeyFormat(key)) {
+      return false;
+    }
 
-  const connectionStatus = getConnectionStatus();
+    try {
+      setIsValidatingApiKey(true);
+      const response = await fetch('https://api.openai.com/v1/models', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${key}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('API key validation error:', error);
+      return false;
+    } finally {
+      setIsValidatingApiKey(false);
+    }
+  };
 
   return (
     <div className="math-tutor-app">
@@ -207,7 +243,7 @@ function App() {
               {!isSessionActive ? (
                 <button
                   onClick={startTutorSession}
-                  disabled={!apiKey || isConnecting}
+                  disabled={!uploadedImage || !isApiKeyValid || isConnecting || isValidatingApiKey}
                   className="btn btn-success btn-lg"
                 >
                   {isConnecting ? (
@@ -236,7 +272,7 @@ function App() {
           <div className="toolbar-right">
             {/* API Key */}
             <div className="toolbar-section">
-              <div className={`control-group ${!apiKey ? 'status-error' : isValidApiKey(apiKey) ? 'status-success' : 'status-error'}`}>
+              <div className={`control-group ${!apiKey ? 'status-error' : isValidatingApiKey ? 'status-warning' : isApiKeyValid ? 'status-success' : 'status-error'}`}>
                 <label className="control-label">API Key</label>
                 <input
                   type="password"
@@ -388,7 +424,8 @@ function App() {
               isRecording={isRecording}
               selectedVoice={selectedVoice}
               uploadedImage={uploadedImage}
-              apiKey={apiKey}
+              isApiKeyValid={isApiKeyValid}
+              isValidatingApiKey={isValidatingApiKey}
               onStartSession={startTutorSession}
               onEndSession={endTutorSession}
               onManualWhiteboardCapture={handleManualWhiteboardCapture}
