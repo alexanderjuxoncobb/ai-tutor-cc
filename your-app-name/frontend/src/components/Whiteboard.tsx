@@ -77,7 +77,7 @@ export default function Whiteboard({ onElementsChange, onStrokeCompleted }: Whit
 
   return (
     <div 
-      style={{ height: '1000px', width: '100%' }}
+      style={{ height: '70vh', width: '100%' }}
       onPointerUp={handlePointerUp}
       onPointerDown={handlePointerDown}
     >
@@ -93,8 +93,7 @@ export default function Whiteboard({ onElementsChange, onStrokeCompleted }: Whit
           appState: {
             currentItemStrokeWidth: 1, // Set default stroke width to small (1)
             activeTool: {
-              type: "freedraw",
-              locked: true // Keep the drawing tool locked/selected
+              locked: true // NOTE TO CLAUDE: Do not change this property - keeps selected tool active after drawing instead of switching back to selection tool
             }
           }
         }}

@@ -173,90 +173,78 @@ function App() {
   return (
     <div className="math-tutor-app">
       <header>
-        <h1>🧮 AI Math Tutor</h1>
+        <h1>AI Math Tutor</h1>
         <p>
-          Upload a math problem and work with your AI tutor on the whiteboard
+          Upload a math problem and collaborate with your AI tutor on an interactive whiteboard
         </p>
       </header>
 
       <main>
-        <ApiKeySection 
-          apiKey={apiKey}
-          setApiKey={setApiKey}
-          selectedVoice={selectedVoice}
-          setSelectedVoice={setSelectedVoice}
-          error={error}
-        />
+        <div className="controls-column">
+          <ApiKeySection 
+            apiKey={apiKey}
+            setApiKey={setApiKey}
+            selectedVoice={selectedVoice}
+            setSelectedVoice={setSelectedVoice}
+            error={error}
+          />
 
-        {sessionError && (
-          <div className="error-message" style={{
-            backgroundColor: '#fee2e2',
-            border: '1px solid #fecaca',
-            borderRadius: '8px',
-            padding: '12px',
-            margin: '16px 0',
-            color: '#dc2626'
-          }}>
-            <strong>Error:</strong> {sessionError}
-            <button 
-              onClick={() => setSessionError(null)}
-              style={{
-                marginLeft: '12px',
-                background: 'none',
-                border: 'none',
-                color: '#dc2626',
-                cursor: 'pointer',
-                fontSize: '16px'
-              }}
-            >
-              ✕
-            </button>
-          </div>
-        )}
+          {sessionError && (
+            <div className="status-message error">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              {sessionError}
+              <button 
+                onClick={() => setSessionError(null)}
+                className="btn btn-outline"
+                style={{ marginLeft: 'auto', padding: 'var(--space-1) var(--space-2)' }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
 
-        {sessionStatus && (
-          <div className="status-message" style={{
-            backgroundColor: '#dbeafe',
-            border: '1px solid #bfdbfe',
-            borderRadius: '8px',
-            padding: '12px',
-            margin: '16px 0',
-            color: '#1d4ed8'
-          }}>
-            <strong>Status:</strong> {sessionStatus}
-          </div>
-        )}
+          {sessionStatus && (
+            <div className="status-message info">
+              <div className="loading-spinner"></div>
+              {sessionStatus}
+            </div>
+          )}
 
-        <ImageUploadSection 
-          uploadedImage={uploadedImage}
-          fileInputRef={fileInputRef}
-          onImageUpload={handleImageUpload}
-          onChooseImageClick={triggerFileSelect}
-          mathProblemAnalysis={mathProblemAnalysis}
-        />
+          <ImageUploadSection 
+            uploadedImage={uploadedImage}
+            fileInputRef={fileInputRef}
+            onImageUpload={handleImageUpload}
+            onChooseImageClick={triggerFileSelect}
+            mathProblemAnalysis={mathProblemAnalysis}
+          />
 
-        <SessionControlsSection 
-          isSessionActive={isSessionActive}
-          isConnected={isConnected}
-          isConnecting={isConnecting}
-          isRecording={isRecording}
-          selectedVoice={selectedVoice}
-          uploadedImage={uploadedImage}
-          apiKey={apiKey}
-          onStartSession={startTutorSession}
-          onEndSession={endTutorSession}
-          onManualWhiteboardCapture={handleManualWhiteboardCapture}
-        />
+          <SessionControlsSection 
+            isSessionActive={isSessionActive}
+            isConnected={isConnected}
+            isConnecting={isConnecting}
+            isRecording={isRecording}
+            selectedVoice={selectedVoice}
+            uploadedImage={uploadedImage}
+            apiKey={apiKey}
+            onStartSession={startTutorSession}
+            onEndSession={endTutorSession}
+            onManualWhiteboardCapture={handleManualWhiteboardCapture}
+          />
 
-        <DebugSection 
-          debugImage={debugImage}
-          onCloseDebug={() => setDebugImage(null)}
-        />
+          <DebugSection 
+            debugImage={debugImage}
+            onCloseDebug={() => setDebugImage(null)}
+          />
+        </div>
 
-        <WhiteboardSection 
-          onElementsChange={handleWhiteboardChange}
-          onStrokeCompleted={handleStrokeCompleted}
-        />
+        <div className="whiteboard-column">
+          <WhiteboardSection 
+            onElementsChange={handleWhiteboardChange}
+            onStrokeCompleted={handleStrokeCompleted}
+          />
+        </div>
       </main>
     </div>
   );
