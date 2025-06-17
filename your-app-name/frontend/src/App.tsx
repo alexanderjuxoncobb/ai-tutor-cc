@@ -283,7 +283,7 @@ function App() {
             {/* API Key */}
             <div className="toolbar-section">
               <div className={`control-group ${!apiKey ? 'status-error' : isValidatingApiKey ? 'status-warning' : isApiKeyValid ? 'status-success' : 'status-error'}`}>
-                <label className="control-label">API Key</label>
+                <label className="control-label">OpenAI API Key</label>
                 <input
                   type="password"
                   value={apiKey}
