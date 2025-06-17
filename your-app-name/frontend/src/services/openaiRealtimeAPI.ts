@@ -50,6 +50,7 @@ export class OpenAIRealtimeService {
   private isRecording = false;
   private currentSession: EphemeralSession | null = null;
   private audioElement: HTMLAudioElement | null = null;
+  private mediaStream: MediaStream | null = null;
   private conversationContext: ConversationContext = {
     teacherReference: {
       problemAnalysis: null,
@@ -176,13 +177,13 @@ export class OpenAIRealtimeService {
 
       // Add local audio track for microphone input
       console.log('🎤 Getting user media...');
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
+      this.mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: true
       });
       
       // Add the audio track
-      const audioTrack = mediaStream.getTracks()[0];
-      this.peerConnection.addTrack(audioTrack, mediaStream);
+      const audioTrack = this.mediaStream.getTracks()[0];
+      this.peerConnection.addTrack(audioTrack, this.mediaStream);
       console.log('✅ Audio track added to peer connection');
 
       // Set up data channel for sending and receiving events
@@ -603,19 +604,37 @@ Be specific about mathematical content and provide actionable feedback.`
     
     this.stopVoiceRecording();
     
+    // Stop all media stream tracks (microphone access)
+    if (this.mediaStream) {
+      console.log('🎤 Stopping media stream tracks...');
+      this.mediaStream.getTracks().forEach(track => {
+        console.log(`Stopping ${track.kind} track`);
+        track.stop();
+      });
+      this.mediaStream = null;
+    }
+    
+    // Close and clean up audio element
+    if (this.audioElement) {
+      console.log('🔊 Cleaning up audio element...');
+      this.audioElement.pause();
+      this.audioElement.srcObject = null;
+      this.audioElement.remove();
+      this.audioElement = null;
+    }
+    
+    // Close data channel
     if (this.dataChannel) {
+      console.log('📡 Closing data channel...');
       this.dataChannel.close();
       this.dataChannel = null;
     }
     
+    // Close peer connection
     if (this.peerConnection) {
+      console.log('🌐 Closing peer connection...');
       this.peerConnection.close();
       this.peerConnection = null;
-    }
-    
-    if (this.audioElement) {
-      this.audioElement.remove();
-      this.audioElement = null;
     }
     
     this.isConnected = false;
@@ -633,7 +652,7 @@ Be specific about mathematical content and provide actionable feedback.`
       }
     };
     
-    console.log('✅ Disconnected from OpenAI Realtime Service and cleared conversation context');
+    console.log('✅ Fully disconnected from OpenAI Realtime Service - all resources cleaned up');
   }
 
   isConnectionActive(): boolean {
@@ -648,7 +667,10 @@ Be specific about mathematical content and provide actionable feedback.`
       dataChannelState: this.dataChannel?.readyState,
       peerConnectionExists: !!this.peerConnection,
       peerConnectionState: this.peerConnection?.connectionState,
-      hasSession: !!this.currentSession
+      hasSession: !!this.currentSession,
+      mediaStreamExists: !!this.mediaStream,
+      mediaStreamActive: this.mediaStream?.active || false,
+      mediaStreamTracks: this.mediaStream?.getTracks().length || 0
     };
   }
 

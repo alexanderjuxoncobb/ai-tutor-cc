@@ -77,7 +77,7 @@ export default function Whiteboard({ onElementsChange, onStrokeCompleted }: Whit
 
   return (
     <div 
-      style={{ height: '85vh', width: '100%', borderRadius: '0.75rem', overflow: 'hidden' }}
+      style={{ height: '100%', width: '100%', borderRadius: '0.75rem', overflow: 'hidden' }}
       onPointerUp={handlePointerUp}
       onPointerDown={handlePointerDown}
     >

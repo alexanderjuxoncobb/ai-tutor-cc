@@ -266,6 +266,16 @@ function App() {
                 </button>
               )}
             </div>
+            
+            {/* Session Status Indicator */}
+            {sessionStatus && (
+              <div className="toolbar-section">
+                <div className={`session-status-indicator ${sessionStatus?.includes('active') ? 'success' : ''}`}>
+                  {!sessionStatus?.includes('active') && <div className="loading-spinner-inline"></div>}
+                  <span>{sessionStatus}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right Side: Form Entries */}
@@ -366,12 +376,7 @@ function App() {
         </div>
       )}
 
-      {sessionStatus && (
-        <div className="status-message info" style={{ margin: 'var(--space-4) var(--space-6)' }}>
-          <div className="loading-spinner"></div>
-          {sessionStatus}
-        </div>
-      )}
+      {/* Session status now shown in toolbar */}
 
       {/* Mobile Controls Overlay */}
       <div 
