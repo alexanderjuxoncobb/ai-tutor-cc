@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useAITutorSession } from "./hooks/useAITutorSession";
 import { useImageUpload } from "./hooks/useImageUpload";
 import { captureAndAnalyzeWhiteboard, captureAndAnalyzeWhiteboardHighQuality } from "./utils/canvasCapture";
@@ -7,6 +7,7 @@ import ImageUploadSection from "./components/ImageUploadSection";
 import SessionControlsSection from "./components/SessionControlsSection";
 import WhiteboardSection from "./components/WhiteboardSection";
 import DebugSection from "./components/DebugSection";
+import type { WhiteboardRef } from "./components/Whiteboard";
 import "./App.css";
 
 function App() {
@@ -22,11 +23,44 @@ function App() {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isApiKeyValid, setIsApiKeyValid] = useState<boolean>(false);
   const [isValidatingApiKey, setIsValidatingApiKey] = useState<boolean>(false);
+  const [autoAddToWhiteboard, setAutoAddToWhiteboard] = useState<boolean>(true);
+  const [isAddingToWhiteboard, setIsAddingToWhiteboard] = useState<boolean>(false);
   const isAnalyzingRef = useRef(false);
   const pendingAnalysisRef = useRef(false);
+  const whiteboardRef = useRef<WhiteboardRef>(null);
 
   // Use modular hooks
-  const { uploadedImage, fileInputRef, handleImageUpload, triggerFileSelect } = useImageUpload();
+  const { uploadedImage, fileInputRef, handleImageUpload: originalHandleImageUpload, triggerFileSelect } = useImageUpload();
+  
+  // Enhanced image upload handler that adds image to whiteboard
+  const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    // Call original upload handler
+    originalHandleImageUpload(event);
+    
+    // Get the uploaded file
+    const file = event.target.files?.[0];
+    if (file && whiteboardRef.current && autoAddToWhiteboard) {
+      setIsAddingToWhiteboard(true);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageDataUrl = e.target?.result as string;
+        if (imageDataUrl) {
+          console.log('🖼️ App: Auto-adding uploaded image to whiteboard');
+          try {
+            whiteboardRef.current?.addImageToCanvas(imageDataUrl);
+            // Show success feedback briefly
+            setTimeout(() => {
+              setIsAddingToWhiteboard(false);
+            }, 1000);
+          } catch (error) {
+            console.error('❌ App: Failed to add image to whiteboard', error);
+            setIsAddingToWhiteboard(false);
+          }
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  }, [originalHandleImageUpload, autoAddToWhiteboard]);
 
   // Use unified AI tutor session hook
   const {
@@ -302,8 +336,18 @@ function App() {
                   <button
                     onClick={triggerFileSelect}
                     className="btn btn-secondary"
+                    disabled={isAddingToWhiteboard}
                   >
-                    {uploadedImage ? '📷 Change Image' : '📁 Upload Image'}
+                    {isAddingToWhiteboard ? (
+                      <>
+                        <div className="loading-spinner-inline"></div>
+                        Adding to board...
+                      </>
+                    ) : uploadedImage ? (
+                      '📷 Change Image'
+                    ) : (
+                      '📁 Upload Image'
+                    )}
                   </button>
                   <input
                     ref={fileInputRef}
@@ -321,6 +365,17 @@ function App() {
                       />
                     </div>
                   )}
+                  <div className="auto-add-toggle" style={{ marginTop: '4px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                      <input
+                        type="checkbox"
+                        checked={autoAddToWhiteboard}
+                        onChange={(e) => setAutoAddToWhiteboard(e.target.checked)}
+                        style={{ margin: 0 }}
+                      />
+                      Auto-add to whiteboard
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
@@ -475,6 +530,7 @@ function App() {
         <div className="whiteboard-container">
           <div className="whiteboard-wrapper">
             <WhiteboardSection 
+              ref={whiteboardRef}
               onElementsChange={handleWhiteboardChange}
               onStrokeCompleted={handleStrokeCompleted}
             />
